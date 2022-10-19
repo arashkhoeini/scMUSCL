@@ -1,0 +1,30 @@
+task: cross_species
+data_path: '/home/akhoeini/scratch/scRNAseq/processed/'
+source: [['cross_species_2/pancreas_baron_mouse.h5ad', 'cross_species_2/pancreas_tm_mouse.h5ad'],['cross_species_3/pancreas_baron_mouse.h5ad', 'cross_species_3/pancreas_tm_mouse.h5ad'],['cross_species_4/pancreas_baron_mouse.h5ad', 'cross_species_4/pancreas_tm_mouse.h5ad']]
+target: ['cross_species_2/pancreas_baron_human.h5ad', 'cross_species_3/pancreas_segerstolp_human.h5ad', 'cross_species_4/pancreas_murano_human.h5ad']
+reps: 3 # experiment repetition
+shuffle_data: True
+cuda: True
+fix_seed: True
+seed: 123
+pretrain: True
+cluster_alignment: True 
+z_dim: 100 # latent representation dim
+h_dim: [1024, 256]  # hidden layer dim
+epochs: 200
+epochs_pretrain: 60
+learning_rate: 0.0005
+learning_rate_pretrain: 0.0005
+lr_scheduler_step: 1000
+lr_scheduler_gamma: 0.1
+simclr_noise: 0.1
+eval_freq: 1
+
+
+
+### Checkpoint
+note: train
+snapshot: './output/checkpoints'
+
+tensorboard: False
+verbose: True

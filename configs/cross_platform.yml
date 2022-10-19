@@ -1,0 +1,31 @@
+task: cross_platform
+data_path: '/home/akhoeini/scratch/scRNAseq/processed/cross_platform/'
+source: ['cel_seq2.h5ad', 'chrom_v3.h5ad', 'indrop.h5ad', 'smart_seq2.h5ad', 'chrom_v2.h5ad', 'drop_seq.h5ad', 'seq_well.h5ad']
+target: ''
+reps: 3 # experiment repetition
+shuffle_data: True
+cuda: True
+fix_seed: True
+seed: 123
+pretrain: True
+cluster_alignment: True
+z_dim: 100 # latent representation dim
+h_dim: [1024, 256]  # hidden layer dim
+epochs: 300
+epochs_pretrain: 40
+learning_rate: 0.0005
+learning_rate_pretrain: 0.0005
+lr_scheduler_step: 1000
+lr_scheduler_gamma: 0.1
+intercluster_const: 0.2
+simclr_noise: 0.1
+eval_freq: 32
+
+
+
+### Checkpoint
+note: train
+snapshot: './output/checkpoints'
+
+tensorboard: False
+verbose: True
