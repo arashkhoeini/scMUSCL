@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ```
 
 ## Datasets 
-We used 14 datasets to run our experiments. These datasets are listed in table below. Please note PBMC dataset by Ding is actually 7 different batches sequenced by 7 different technologies.
+We used 20 datasets to run our experiments. These datasets are listed in table below. Please note PBMC dataset by Ding is actually 7 different batches sequenced by 7 different technologies.
 | Specie | Tissue | Source |
 | --- | --- | --- |
 | Mouse | Pancreas | Baron |
@@ -27,9 +27,12 @@ We used 14 datasets to run our experiments. These datasets are listed in table b
 | Human | Kidney | Park |
 | Mouse | Kidney | Tabula Muris |
 | Human | PBMC | Ding |
-
-All 14 preprocessed datasets can be downloaded from [here](https://drive.google.com/file/d/1cY6CLKYfuGqzBMWTaVsKjbWr0k_6jNKP/view?usp=sharing).
-
+| Human | Lung | Yu | 
+| Human | Esophagus | Yu |
+| Human | Liver | Yu |  
+| Human | Stomach | Yu |
+| Human | Small Intestine | Yu |
+| Human | Colon | Yu | 
 
 ## Running Experiments
 
