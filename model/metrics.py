@@ -8,8 +8,14 @@ from scipy.optimize import linear_sum_assignment
 
 def compute_scores(y_true, y_pred, scoring={'accuracy','precision','recall','nmi',
                                                 'adj_rand','f1_score','adj_mi'}):
-    y_true = y_true.cpu().numpy()
-    y_pred = y_pred.cpu().numpy()
+    if not isinstance(y_true, np.ndarray):
+        try:
+            y_true = y_true.cpu().numpy()
+            y_pred = y_pred.cpu().numpy()
+        except:
+            y_true = y_true.numpy()
+            y_pred = y_pred.numpy()
+        
     
     scores = {}
     y_true, y_pred = hungarian_match(y_true, y_pred)

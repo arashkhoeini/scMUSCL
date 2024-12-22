@@ -6,7 +6,7 @@ from pathlib import Path
 from data.experiment import Experiment
 import numpy as np
 import torch
-from model.trainer import Trainer
+from trainer import Trainer
 import sys
 import pandas as pd
 from datetime import datetime

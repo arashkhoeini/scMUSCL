@@ -13,6 +13,10 @@ from datetime import datetime
 import warnings
 import os
 warnings.filterwarnings("ignore")
+from model.metrics import compute_scores
+import scanpy as sc
+import scarches as sca
+import torch
 
 
 def init_seed(seed):
@@ -26,7 +30,11 @@ def init_seed(seed):
 
 
 def store_result(config, result):
-    path = config.output_dir
+    now = datetime.now()
+    dt_string = now.strftime("%Y-%m-%d-%H-%M")
+    path = Path(f'./output/result/{config.task}/{dt_string}-{os.getpid()}')
+    path.mkdir(parents=True, exist_ok=True)
+
     metrics = ['adj_mi', 'accuracy', 'recall',
                'adj_rand', 'nmi', 'precision', 'f1_score']
     avg_result = {key: [] for key in metrics}
@@ -54,29 +62,24 @@ def get_experiments(config, idx):
     src_list = config.source[idx]
     for src_path in src_list:
         adata = ann.read_h5ad(config.data_path+src_path)
-        exp = Experiment(adata.X, adata.obs_names,
-                         adata.var_names.values, src_path, adata.obs.y)
-        src_labels_uniq = src_labels_uniq.union(set(exp.y))
-        src_experiments.append(exp)
+        # exp = Experiment(adata.X, adata.obs_names,
+        #                  adata.var_names.values, src_path, adata.obs.y)
+        # src_labels_uniq = src_labels_uniq.union(set(exp.y))
+        src_experiments.append(adata)
     tgt_adata = ann.read_h5ad(config.data_path+config.target[idx])
-    tgt_experiment = Experiment(tgt_adata.X, tgt_adata.obs_names,
-                                tgt_adata.var_names.values, config.target[idx], tgt_adata.obs.y)
-    return src_experiments, tgt_experiment, src_labels_uniq
+    # tgt_experiment = Experiment(tgt_adata.X, tgt_adata.obs_names,
+    #                             tgt_adata.var_names.values, config.target[idx], tgt_adata.obs.y)
+    return src_experiments, tgt_adata
 
 
 def main():
-    now = datetime.now()
     config = init_config("configs/cross_species.yml", sys.argv)
-    dt_string = now.strftime("%Y-%m-%d-%H-%M")
-    path = Path(f'./output/result/{config.task}/{dt_string}-{os.getpid()}')
-    path.mkdir(parents=True, exist_ok=True)
-    config['output_dir'] = path
     if config.fix_seed:
         init_seed(config.seed)
 
     all_result = {}
     for i in range(len(config.source)):
-        src_experiments, tgt_experiment, src_labels_uniq = get_experiments(
+        src_experiments, tgt_experiment = get_experiments(
             config, i)
         
         result = {}
@@ -88,26 +91,48 @@ def main():
             if torch.cuda.is_available() and not config.cuda:
                 print(
                     "WARNING: You have a CUDA device, so you should probably run with --cuda")
-            device = 'cuda:0' if torch.cuda.is_available() and config.cuda else 'cpu'
-
-            model = Trainer(src_experiments, tgt_experiment,
-                            n_clusters=len(src_labels_uniq),
-                            config=config,
-                            device=device)
-
-            adata_tgt, eval_result, src_result = model.train()
-            adata_src, _ = model.assign_clusters(domain='src')
-            adata_tgt.write(config.output_dir/f'tgt_{i}.h5ad')
-            adata_src[0].write(config.output_dir/f'src_{i}.h5ad')
-            print(f'Repetition {rep}')
-            print(f"\tTarget ARI: {eval_result['adj_rand']}")
-            print(f"\tSource ARI: {src_result['adj_rand']}")
+            # device = 'cuda:0' if torch.cuda.is_available() and config.cuda else 'cpu'
+            celltypes, preds = train(src_experiments, tgt_experiment)
+            eval_result = compute_scores(celltypes, preds)
             result[rep] = eval_result
         all_result[config.target[i][config.target[i].index(
             '/')+1:config.target[i].index('.')]] = result
     df_result = store_result(config, all_result)
     return df_result
 
+def train(src_data, tgt_data):
+    
+    for i, src in enumerate(src_data):
+        src.obs['batch'] = f'src_{i}'
+    src = ann.concat(src_data, axis=0)
+    tgt_data.obs['batch'] = 'tgt_0'
+    sca.models.SCVI.setup_anndata(src, batch_key=f'batch')
+    vae = sca.models.SCVI(
+                            src,
+                            n_layers=3,
+                            encode_covariates=True,
+                            deeply_inject_covariates=False,
+                            use_layer_norm="both",
+                            use_batch_norm="none",
+                        )
+    vae.train(max_epochs=400)
+    ref_path = 'ref_model/'
+    vae.save(ref_path, overwrite=True)
+    model = sca.models.SCVI.load_query_data(
+                                tgt_data,
+                                ref_path,
+                                freeze_dropout = True,
+                            )
+    model.train(max_epochs=200, plan_kwargs=dict(weight_decay=0.0))
+    query_latent = sc.AnnData(model.get_latent_representation())
+    stoi = {t:i for i,t in enumerate(tgt_data.obs['y'].unique())}
+    query_latent.obs['y'] = [stoi[t] for t in tgt_data.obs['y'].tolist()]
+    sc.pp.neighbors(query_latent)
+    sc.tl.leiden(query_latent)
+    celltypes = query_latent.obs['y'].values
+    preds = query_latent.obs['leiden'].values
+
+    return celltypes, preds
 
 if __name__ == '__main__':
     main()
