@@ -23,7 +23,8 @@ import torch.nn.functional as F
 class Trainer:
 
     def __init__(self, source_data: List[Experiment], target_data: Experiment, n_clusters: int, config, device: str):
-
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
         self.config = config
 
         if self.config.tensorboard:
@@ -31,10 +32,14 @@ class Trainer:
         self.genes = source_data[0].genes
         self.n_source_clusters, self.label_dict_reversed = self.prepare_labels(
             source_data, target_data)
-        self.source_loaders, self.target_loader, self.pretrain_loader, self.val_loader = \
+        if self.config.verbose:
+            print("Preparing data loaders...")
+        self.source_loaders, self.target_loader, self.val_loader = \
             init_data_loaders(source_data, target_data, self.config.shuffle_data, 1)
         self.input_dim = len(self.genes)
 
+        if self.config.verbose: 
+            print("Initializing the network...")
         self.net = Net(self.input_dim, config.z_dim, config.h_dim,  0)
         self.n_target_clusters = n_clusters
         self.pretrain_epoch = config.epochs_pretrain
@@ -114,35 +119,40 @@ class Trainer:
         infonce = InfoNCE()
         sinfonce = SupervisedInfoNCE()
         source_iter = [iter(dl) for dl in self.source_loaders]
+        # torch.cuda.empty_cache() 
         for epoch in pbar:
             total_loss = 0
             for loader in source_iter:
                 x, _, _ = next(loader)
                 x = x.to(self.device)
-                x_hat = self.add_noise(
-                    x, ratio=self.config.simclr_noise).to(self.device)
-                h = self.net.encoder(x)
-                h_hat = self.net.encoder(x_hat)
-                loss = infonce(torch.concat([h, h_hat], dim=0))
-                with torch.no_grad():
-                    total_loss += loss.item()
+                # x_hat = self.add_noise(
+                #     x, ratio=self.config.simclr_noise).to(self.device)
+                # h = self.net.encoder(x)
+                # h_hat = self.net.encoder(x_hat)
+                # loss = infonce(torch.concat([h, h_hat], dim=0))
+                # with torch.no_grad():
+                #     total_loss += loss.item()
+
+                loss = 0
+                b = 256
+                for i in range(0, x.size(0), b):
+                    i_end = min(i+b, x.size(0))
+                    x_batch = x[i:i_end]
+                    x_hat = self.add_noise(
+                            x_batch, ratio=self.config.simclr_noise).to(self.device)
+                    h = self.net.encoder(x_batch)
+                    h_hat = self.net.encoder(x_hat)
+                    loss += infonce(torch.concat([h, h_hat], dim=0))/ (x.size(0)//b)
                     
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
             
+            
+            
+            
             x, ـ,  ـ = next(iter(self.target_loader))
             x = x.to(self.device)
-            # loss = 0
-            # for i in range(0, x.size(0), 1024):
-            #     i_end = min(i+1024, x.size(0))
-            #     x_batch = x[i:i_end]
-            #     x_hat = self.add_noise(
-            #             x_batch, ratio=self.config.simclr_noise).to(self.device)
-            #     h = self.net.encoder(x_batch)
-            #     h_hat = self.net.encoder(x_hat)
-            #     loss += infonce(torch.concat([h, h_hat], dim=0))/ (x.size(0)//1024)
-            
             x_hat = self.add_noise(
                     x, ratio=self.config.simclr_noise).to(self.device)
             h = self.net.encoder(x)
@@ -154,22 +164,6 @@ class Trainer:
             optim.zero_grad()
             loss.backward()
             optim.step()
-
-
-            # for x, _, _ in self.pretrain_loader:
-            #     x = x.to(self.device)
-            #     criterion = ContrastiveLoss(len(x))
-            #     x_hat = self.add_noise(
-            #         x, ratio=self.config.simclr_noise).to(self.device)
-            #     h = self.net.encoder(x)
-            #     h_hat = self.net.encoder(x_hat)
-            #     loss = criterion(h, h_hat)
-            #     with torch.no_grad():
-            #         total_loss += loss.item()
-                
-            #     optim.zero_grad()
-            #     loss.backward()
-            #     optim.step()
 
             pbar.set_postfix(pretrain_loss=total_loss)
             epoch_loss.append(total_loss)

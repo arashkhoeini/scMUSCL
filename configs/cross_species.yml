@@ -1,5 +1,5 @@
 task: cross_species
-data_path: '/home/akhoeini/scratch/scRNAseq/processed/'
+data_path: '/media/arash/Data/datasets/scMUSCL/'
 # source: [['cross_species_2/pancreas_baron_mouse.h5ad', 'cross_species_2/pancreas_tm_mouse.h5ad'],['cross_species_3/pancreas_baron_mouse.h5ad', 'cross_species_3/pancreas_tm_mouse.h5ad'],['cross_species_4/pancreas_baron_mouse.h5ad', 'cross_species_4/pancreas_tm_mouse.h5ad']]
 # target: ['cross_species_2/pancreas_baron_human.h5ad', 'cross_species_3/pancreas_segerstolp_human.h5ad', 'cross_species_4/pancreas_murano_human.h5ad']
 source: [['cross_species_2/pancreas_baron_mouse.h5ad'],['cross_species_2/pancreas_tm_mouse.h5ad'],['cross_species_3/pancreas_baron_mouse.h5ad'], ['cross_species_3/pancreas_tm_mouse.h5ad'], ['cross_species_4/pancreas_baron_mouse.h5ad'], ['cross_species_4/pancreas_tm_mouse.h5ad']]

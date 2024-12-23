@@ -1,0 +1,31 @@
+task: endoderm
+data_path: '/media/arash/Data/datasets/scMUSCL/endoderm/'
+source: ['colon.h5ad', 'esophagus.h5ad', 'liver.h5ad', 'lung.h5ad', 'si.h5ad', 'stomach.h5ad']
+target: ''
+reps: 3 # experiment repetition
+shuffle_data: True
+cuda: True
+fix_seed: True
+seed: 123
+pretrain: True
+cluster_alignment: True
+z_dim: 100 # latent representation dim
+h_dim: [1024, 256]  # hidden layer dim
+epochs: 300
+epochs_pretrain: 40
+learning_rate: 0.0005
+learning_rate_pretrain: 0.0005
+lr_scheduler_step: 1000
+lr_scheduler_gamma: 0.1
+intercluster_const: 0.2
+simclr_noise: 0.1
+eval_freq: 32
+
+
+
+### Checkpoint
+note: train
+snapshot: './output/checkpoints'
+
+tensorboard: False
+verbose: True

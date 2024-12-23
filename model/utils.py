@@ -39,23 +39,15 @@ def init_loader(datasets, val_split = 0.8):
     return train_loader_all, val_loader_all
 
 
-def init_data_loaders(labeled_data, unlabeled_data, shuffle, val_split, pretrain_data=None):
+def init_data_loaders(labeled_data, unlabeled_data, shuffle, val_split):
     """Initialize loaders for pretraing, training (labeled and unlabeled datasets) and validation. """
     train_loader, val_loader = init_loader(labeled_data, val_split)
-    if not pretrain_data:
-        pretrain_data = Experiment.concat(unlabeled_data, labeled_data[0])
-        if len(labeled_data) > 1:
-            for i in range(1, len(labeled_data)):
-                pretrain_data = Experiment.concat(pretrain_data, labeled_data[i])
-                
-    pretrain_loader = torch.utils.data.DataLoader(dataset=pretrain_data, 
-                                                       batch_size=256,
-                                                       shuffle=shuffle)        
+          
     test_loader = DataLoader(unlabeled_data, 
                             batch_sampler=EpochSampler(torch.randperm(len(unlabeled_data.x))),
                             pin_memory=True) 
 
-    return train_loader, test_loader, pretrain_loader, val_loader
+    return train_loader, test_loader, val_loader
            
            
 def euclidean_dist(x, y):
